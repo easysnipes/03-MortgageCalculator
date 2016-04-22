@@ -1,0 +1,600 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"c",
+				"cursor"
+			],
+			[
+				"text-decorati",
+				"text-decoration"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/C/Dev/easysnipes/04-ChangeCalculator/java/index.js",
+			"settings":
+			{
+				"buffer_size": 456,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": " <body>\n      <section class='main-container'>\n          <ul class='change-output'></ul>\n -        <input type=\"text\" placeholder=\"Insert amount\"/>\n +        <input type=\"text\" id=\"amount-input\" placeholder=\"Insert amount\"/>\n          <div class='error'></div>\n      </section>\n  ",
+			"file": "/C/Dev/easysnipes/04-ChangeCalculator/index.html",
+			"file_size": 1397,
+			"file_write_time": 131056514391968709,
+			"settings":
+			{
+				"buffer_size": 280,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "/*\n * Exact change calculator (recursion learning exercice)\n * Eric Belanger // github.com/bilange // Twitter: @bilange\n * \n * This code has been build to demonstrate how to do recursion, for people who\n * wants to know Go better via code examples. This code has been HIGHLY\n * documented to help the learning process. Feel free to fork, base upon or\n * otherwise copy this code! :-)\n *\n * This MAY be NOT the only way to do this task, so feel free to experiment!\n *\n * PS: The variables are named after the word 'denomination', as per\n * http://en.wikipedia.org/wiki/Denomination_%28currency%29\n *\n */ \n\npackage main\n\nimport ( \n  \"fmt\"\n  \"sort\"\n  \"math\"\n)\n\n//Here, I am keeping all the valid currency denominations (still in\n//circulation), you might want to change the values to reflect what's used in\n//your country. Here, I have put what's used in Canada, eh. No need to put that\n//in order, it'll be reordered later.\nvar denominations = []float64{ \n  50.00, 20.00, 10.00, 5.00, 100.00,\n  2.00, 1.00, 0.25, 0.10, 0.05, 0.01,\n}\n\n//Here we keep track of how many coins/bills we need.\nvar denomSum = []float64{}\n\nfunc main() {\n\n  //Enter the amount due that you want to want to split in exact change here.\n  var amount float64 = 438.99\n\n  //This line has been extracted from http://golang.org/pkg/sort/#example_Interface_reverse\n  //I'll attempt an explaination at the end of the code, but for now, let's\n  //just say 'denominations' values will be reordered, highest first. Details\n  //at the bottom of the code.\n  sort.Sort(Reverse{sort.Float64Slice(denominations)})\n\n  //That slice will keep track of how many coins/bills we need to give out.\n  //Note that the order will match the order of the global 'denominations'\n  //variable, order the biggest first.\n  denomSum = make([]float64, len(denominations), len(denominations))\n\n  //We call exactChange for the first time here. This will start our recursion\n  //procedure. Passing the values, in order: \n  // - the (total) amount to calculate (438.99)\n  // - 0, as we use that to first access denominations[0].\n  exactChange(amount,  0)\n  //Now, at this point in the code, denomSum contains the right amount of\n  //bills/coins, and recursion has ended.\n\n  fmt.Printf(\"The right quantity of coins and/or bills for %.2f$:\\n\", amount)\n  for i := 0; i<len(denomSum); i++ {\n    if denomSum[i] > 0 { \n      fmt.Printf(\"\\t%1.0f x $%.2f\\t= $%.2f\\n\", denomSum[i], denominations[i], denomSum[i] * denominations[i]) \n    }\n  }\n}\n\nfunc exactChange(amount float64, denomination float64) {\n\n  //Iterating into every coin/bill types held in the slice 'denominations'\n  //If we are just getting started, we will use 0 for 'denomination' index.\n  //However, this will be different if coming from recursion.\n  for i := denomination; i < float64(len(denominations)); i++ {\n    if denominations[int(i)] > amount { \n      //The current value held in 'i' points to a denominations[]\n      //value higher than what's left to calculate anyway. Let's calculate with\n      //the NEXT (+1, remember that we ordered our array accordingly in main())\n      //coin or bill in our denominations[] slice.\n      exactChange(amount, denomination + 1)\n\n    } else { \n      //Our current denomination[i] can be used, as it fits what's left to calculate.\n\n      /* \n       * As we're using floats all along, we cannot use the '%' modulo\n       * operation on float types in Go. However, the fine folks at Go/Google\n       * has come up with an equivalent function for floats.\n       *\n       *  math.Modf(): integer and fractional floating-point numbers that sum to f. \n       *      http://golang.org/pkg/math/#Modf\n       *\n       *  math.Mod(): Mod returns the floating-point remainder of x/y\n       *      http://golang.org/pkg/math/#Mod\n       */ \n\n      //Keeping what can possibly fit (the whole part) into the 'sum' slice\n      denomSum[int(i)] , _ = math.Modf(amount / denominations[int(i)])\n\n      //We STILL want to calculate for whatever's not fitting in our current\n      //denomination. To do that, let's call the exactChange() again, but this\n      //time with the \"remainder\", or that is the part that couldn't fit into\n      //the current denomination.  \n      //\n      //As for the first parameter, if we were to, for example, calculate what\n      //we need to give if we have an amount of 1.99$ after dealing with 1.00$,\n      //we would say there's still 0.99$ left.\n      //\n      //As for the second parameter, we specify which index in our\n      //denominations[] slice we want to start checking. It's totally useless\n      //to start checking from the first, biggest denomination possible since\n      //we are actually narrowing down denominations, so we're keeping track of\n      //the 'current' denomination. Also, it's safe to skip the CURRENT\n      //denomination (since we have calculated what can fits and what cannot\n      //just above in the code execution), so we add +1 to start where we KNOW\n      //there's gonna be a good chance of having a 'match'.\n      exactChange(math.Mod(amount , denominations[int(i)]), denomination + 1)\n\n      return\n      //Furthermore, omitting a 'return' here will still continue in our 'for'\n      //loop above, causing an endless loop.\n    }\n  }\n}\n\n//The following struct and function has been ripped off this URL:\n//  http://golang.org/pkg/sort/#example_Interface_reverse\n//\n//Here's my ATTEMPTED explaination. Not for the faint of the heart. The magical line: \n//   sort.Sort(Reverse{sort.Float64Slice(denominations)})\n// ...does this, kind of:\n// - sort.Sort sorts, and needs an interface, that Reverse provide.\n// - Reverse is a struct initialized with its only variable, a sort.Interface.\n// - Reverse overrides the Interface's Less() by it's own, reversing the comparison\n//   direction, causing the sort.Sort() method to re-order biggest first.\n// - sort.Float64Slice()? I am missing the part (after looking at the code)\n//   where I can simply pass 'denominations' as if Float64Slice was a function,\n//   but since Float64Slice is a declaration of a new type this seems somehow legit \n//   see: http://golang.org/src/pkg/sort/sort.go?s=5280:5307#L223 for the code, \n//   or:  http://golang.org/ref/spec#Type_declarations for the reading\n// - Float64Slice, as type of []float64, also have the methods implementing\n//   Interface, defined here: http://golang.org/src/pkg/sort/sort.go?h=Interface#L11\ntype Reverse struct {\n  sort.Interface\n}\n\nfunc (r Reverse) Less(i, j int) bool {\n  return r.Interface.Less(j, i)\n}\n\n//On a second thought, this would have been less hassle to make a function that\n//takes a float64[], iterates through every element and re-order them,\n//recursively. I didn't go that route since the code in the Go's documentation\n//is showing programming the \"Go\" way. If you want to do recursion on your own float64[], \n//this is left as homework to the reader :-)\n\n//Thanks for reading!\n",
+			"file": "/C/Users/stephen/AppData/Local/Temp/Temp1_3949626-32b35ed223b952a4181a74b0435c2103e3e5e7f6 (1).zip/3949626-32b35ed223b952a4181a74b0435c2103e3e5e7f6/exactchange.go",
+			"file_size": 6892,
+			"file_write_time": 131057514411327797,
+			"settings":
+			{
+				"buffer_size": 6892,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "index.html",
+			"settings":
+			{
+				"buffer_size": 925,
+				"line_ending": "Windows"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 467.0,
+		"last_filter": "packag",
+		"selected_items":
+		[
+			[
+				"packag",
+				"Package Control: Install Package"
+			],
+			[
+				"",
+				"Package Control: Install Package"
+			],
+			[
+				"package control",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 553.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/C/Dev/easysnipes",
+		"/C/Dev/easysnipes/01-AstroWeightCalculator/css",
+		"/C/Dev/easysnipes/01-AstroWeightCalculator/java",
+		"/C/Dev/easysnipes/03-MortgageCalculator",
+		"/C/Dev/easysnipes/03-MortgageCalculator/css",
+		"/C/Dev/easysnipes/03-MortgageCalculator/java",
+		"/C/Dev/easysnipes/04-ChangeCalculator/css",
+		"/C/Dev/easysnipes/04-ChangeCalculator/java"
+	],
+	"file_history":
+	[
+		"/C/Dev/easysnipes/03-MortgageCalculator/.gitignore",
+		"/C/Dev/easysnipes/03-MortgageCalculator/index.html",
+		"/C/Dev/easysnipes/03-MortgageCalculator/css/index.css",
+		"/C/Dev/easysnipes/03-MortgageCalculator/css/css.css",
+		"/C/Dev/easysnipes/03-MortgageCalculator/java/index.js",
+		"/C/Users/stephen/AppData/Roaming/Sublime Text 3/Packages/User/SideBarEnhancements/Open With/Side Bar.sublime-menu",
+		"/C/Dev/easysnipes/03-MortgageCalculator/index.css",
+		"/C/Dev/01-AstroWeightCalculator/java/index.js",
+		"/C/Dev/index.html",
+		"/C/Dev/css/01-AstroWeightCalculator",
+		"/C/Users/stephen/AppData/Roaming/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/C/Dev/01-AstroWeightCalculator",
+		"/C/Users/stephen/Desktop/01-AstroWeightCalculator",
+		"/C/Users/stephen/Documents/Coding Projects/index_studies_html"
+	],
+	"find":
+	{
+		"height": 0.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 3,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/C/Dev/easysnipes/04-ChangeCalculator/java/index.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 456,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								456,
+								456
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"bh_regions":
+							[
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content"
+							],
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/C/Dev/easysnipes/04-ChangeCalculator/index.html",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 280,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								280,
+								280
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"bh_regions":
+							[
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content"
+							],
+							"syntax": "Packages/HTML/HTML.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/C/Users/stephen/AppData/Local/Temp/Temp1_3949626-32b35ed223b952a4181a74b0435c2103e3e5e7f6 (1).zip/3949626-32b35ed223b952a4181a74b0435c2103e3e5e7f6/exactchange.go",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6892,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								628,
+								628
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"bh_regions":
+							[
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content"
+							],
+							"syntax": "Packages/Go/Go.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 360.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "index.html",
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 925,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"bh_regions":
+							[
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content"
+							],
+							"syntax": "Packages/HTML/HTML.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 78.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "Mortgage.sublime-project",
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 188.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
